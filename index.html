@@ -50,6 +50,7 @@
                 this.health = health;
                 this.damage = damage;
                 this.selected = false;
+                this.target = null;
             }
 
             draw() {
@@ -60,6 +61,16 @@
                 if (this.selected) {
                     ctx.strokeStyle = "yellow";
                     ctx.strokeRect(this.x - 2, this.y - 2, this.size + 4, this.size + 4);
+                }
+            }
+
+            move(targetX, targetY) {
+                const dx = targetX - this.x;
+                const dy = targetY - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance > this.speed) {
+                    this.x += (dx / distance) * this.speed;
+                    this.y += (dy / distance) * this.speed;
                 }
             }
 
@@ -76,7 +87,7 @@
 
         class Enemy extends Unit {
             constructor(x, y) {
-                super(x, y, "red", "enemy", 2, 50, 5);
+                super(x, y, "red", "enemy", 1.5, 50, 5);
                 this.direction = Math.random() > 0.5 ? 1 : -1;
             }
 
@@ -93,8 +104,8 @@
                 this.units = [];
             }
 
-            addUnit(x, y, color, type, speed, health, damage) {
-                this.units.push(new Unit(x, y, color, type, speed, health, damage));
+            addUnit(x, y) {
+                this.units.push(new Unit(x, y, "blue", "soldier", 3, 100, 10));
             }
 
             draw() {
@@ -120,14 +131,14 @@
         }
 
         const playerArmy = new PlayerArmy();
-        playerArmy.addUnit(100, 100, "blue", "soldier", 3, 100, 10);
+        playerArmy.addUnit(100, 100);
         
         const enemies = [new Enemy(400, 200), new Enemy(600, 300)];
         const playerBase = new Base(50, canvas.height - 100);
 
         function recruitUnit() {
             if (resources >= 50) {
-                playerArmy.addUnit(100, 150, "blue", "soldier", 3, 100, 10);
+                playerArmy.addUnit(100, 150);
                 resources -= 50;
                 document.getElementById("resources").textContent = resources;
             }
@@ -151,31 +162,11 @@
             requestAnimationFrame(gameLoop);
         }
 
-        window.addEventListener("keydown", (e) => {
-            playerArmy.units.forEach(unit => {
-                if (unit.selected) {
-                    switch (e.key) {
-                        case "ArrowUp":
-                            unit.y = Math.max(0, unit.y - unit.speed);
-                            break;
-                        case "ArrowDown":
-                            unit.y = Math.min(canvas.height - unit.size, unit.y + unit.speed);
-                            break;
-                        case "ArrowLeft":
-                            unit.x = Math.max(0, unit.x - unit.speed);
-                            break;
-                        case "ArrowRight":
-                            unit.x = Math.min(canvas.width - unit.size, unit.x + unit.speed);
-                            break;
-                    }
-                }
-            });
-        });
-
         canvas.addEventListener("click", (e) => {
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
+            let unitSelected = false;
             playerArmy.units.forEach(unit => {
                 if (
                     mouseX >= unit.x &&
@@ -184,12 +175,32 @@
                     mouseY <= unit.y + unit.size
                 ) {
                     unit.selected = !unit.selected;
+                    unitSelected = true;
                 }
             });
+            if (!unitSelected) {
+                playerArmy.units.forEach(unit => {
+                    if (unit.selected) {
+                        unit.target = { x: mouseX, y: mouseY };
+                    }
+                });
+            }
         });
 
-        gameLoop();
+        function updateUnits() {
+            playerArmy.units.forEach(unit => {
+                if (unit.target) {
+                    unit.move(unit.target.x, unit.target.y);
+                }
+            });
+        }
+
+        function updateGame() {
+            updateUnits();
+            gameLoop();
+        }
+
+        setInterval(updateGame, 1000 / 60);
     </script>
 </body>
 </html>
-
