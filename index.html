@@ -23,6 +23,14 @@
             padding: 10px;
             border-radius: 5px;
         }
+        button {
+            margin: 5px;
+            padding: 10px;
+            background: #333;
+            color: #0f0;
+            border: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -30,6 +38,7 @@
     <div id="hud">
         <p>Resources: <span id="resources">100</span></p>
         <button onclick="recruitUnit()">Recruit Soldier (50)</button>
+        <button onclick="buildTurret()">Build Turret (100)</button>
     </div>
     <script>
         const canvas = document.getElementById("gameCanvas");
@@ -63,25 +72,24 @@
                     ctx.strokeRect(this.x - 2, this.y - 2, this.size + 4, this.size + 4);
                 }
             }
+        }
 
-            move(targetX, targetY) {
-                const dx = targetX - this.x;
-                const dy = targetY - this.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                if (distance > this.speed) {
-                    this.x += (dx / distance) * this.speed;
-                    this.y += (dy / distance) * this.speed;
-                }
+        class Turret {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = 30;
+                this.color = "gray";
+                this.health = 200;
+                this.range = 150;
+                this.damage = 15;
             }
 
-            attack(target) {
-                if (Math.abs(this.x - target.x) < this.size && Math.abs(this.y - target.y) < this.size) {
-                    target.health -= this.damage;
-                    if (target.health <= 0) {
-                        return true;
-                    }
-                }
-                return false;
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.fillStyle = "white";
+                ctx.fillText(this.health, this.x, this.y - 5);
             }
         }
 
@@ -99,108 +107,38 @@
             }
         }
 
-        class PlayerArmy {
-            constructor() {
-                this.units = [];
-            }
-
-            addUnit(x, y) {
-                this.units.push(new Unit(x, y, "blue", "soldier", 2, 100, 10));
-            }
-
-            draw() {
-                this.units.forEach(unit => unit.draw());
-            }
-        }
-
-        class Base {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.size = 60;
-                this.color = "green";
-                this.health = 1000;
-            }
-
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, this.size, this.size);
-                ctx.fillStyle = "white";
-                ctx.fillText(this.health, this.x, this.y - 5);
-            }
-        }
-
-        const playerArmy = new PlayerArmy();
-        playerArmy.addUnit(100, 100);
-        
+        const playerArmy = [];
+        const turrets = [];
         const enemies = [new Enemy(400, 200), new Enemy(600, 300)];
-        const playerBase = new Base(50, canvas.height - 100);
 
         function recruitUnit() {
             if (resources >= 50) {
-                playerArmy.addUnit(100, 150);
+                playerArmy.push(new Unit(100, 150, "blue", "soldier", 2, 100, 10));
                 resources -= 50;
+                document.getElementById("resources").textContent = resources;
+            }
+        }
+
+        function buildTurret() {
+            if (resources >= 100) {
+                turrets.push(new Turret(200, 200));
+                resources -= 100;
                 document.getElementById("resources").textContent = resources;
             }
         }
 
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            playerBase.draw();
-            playerArmy.draw();
-            enemies.forEach((enemy, index) => {
+            playerArmy.forEach(unit => unit.draw());
+            turrets.forEach(turret => turret.draw());
+            enemies.forEach(enemy => {
                 enemy.update();
                 enemy.draw();
-                playerArmy.units.forEach((unit, unitIndex) => {
-                    if (unit.attack(enemy)) {
-                        enemies.splice(index, 1);
-                        resources += 30;
-                        document.getElementById("resources").textContent = resources;
-                    }
-                });
             });
             requestAnimationFrame(gameLoop);
         }
 
-        canvas.addEventListener("click", (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            let unitSelected = false;
-            playerArmy.units.forEach(unit => {
-                if (
-                    mouseX >= unit.x &&
-                    mouseX <= unit.x + unit.size &&
-                    mouseY >= unit.y &&
-                    mouseY <= unit.y + unit.size
-                ) {
-                    unit.selected = !unit.selected;
-                    unitSelected = true;
-                }
-            });
-            if (!unitSelected) {
-                playerArmy.units.forEach(unit => {
-                    if (unit.selected) {
-                        unit.target = { x: mouseX, y: mouseY };
-                    }
-                });
-            }
-        });
-
-        function updateUnits() {
-            playerArmy.units.forEach(unit => {
-                if (unit.target) {
-                    unit.move(unit.target.x, unit.target.y);
-                }
-            });
-        }
-
-        function updateGame() {
-            updateUnits();
-            gameLoop();
-        }
-
-        setInterval(updateGame, 1000 / 60);
+        gameLoop();
     </script>
 </body>
 </html>
