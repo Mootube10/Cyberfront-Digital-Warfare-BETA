@@ -26,23 +26,27 @@
         canvas.height = window.innerHeight;
 
         class Unit {
-            constructor(x, y, color) {
+            constructor(x, y, color, type, speed = 3, health = 100) {
                 this.x = x;
                 this.y = y;
                 this.size = 20;
                 this.color = color;
-                this.speed = 5;
+                this.speed = speed;
+                this.type = type;
+                this.health = health;
             }
 
             draw() {
                 ctx.fillStyle = this.color;
                 ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.fillStyle = "white";
+                ctx.fillText(this.health, this.x, this.y - 5);
             }
         }
 
         class Enemy extends Unit {
             constructor(x, y) {
-                super(x, y, "red");
+                super(x, y, "red", "enemy", 2, 50);
                 this.direction = Math.random() > 0.5 ? 1 : -1;
             }
 
@@ -54,12 +58,48 @@
             }
         }
 
-        const player = new Unit(100, 100, "blue");
+        class PlayerArmy {
+            constructor() {
+                this.units = [];
+            }
+
+            addUnit(x, y, color, type, speed, health) {
+                this.units.push(new Unit(x, y, color, type, speed, health));
+            }
+
+            draw() {
+                this.units.forEach(unit => unit.draw());
+            }
+        }
+
+        class Base {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = 50;
+                this.color = "green";
+                this.health = 500;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.fillStyle = "white";
+                ctx.fillText(this.health, this.x, this.y - 5);
+            }
+        }
+
+        const playerArmy = new PlayerArmy();
+        playerArmy.addUnit(100, 100, "blue", "soldier", 3, 100);
+        playerArmy.addUnit(130, 100, "blue", "tank", 2, 200);
+        
         const enemies = [new Enemy(400, 200), new Enemy(600, 300)];
+        const playerBase = new Base(50, canvas.height - 100);
 
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            player.draw();
+            playerBase.draw();
+            playerArmy.draw();
             enemies.forEach(enemy => {
                 enemy.update();
                 enemy.draw();
@@ -68,20 +108,22 @@
         }
 
         window.addEventListener("keydown", (e) => {
-            switch (e.key) {
-                case "ArrowUp":
-                    player.y = Math.max(0, player.y - player.speed);
-                    break;
-                case "ArrowDown":
-                    player.y = Math.min(canvas.height - player.size, player.y + player.speed);
-                    break;
-                case "ArrowLeft":
-                    player.x = Math.max(0, player.x - player.speed);
-                    break;
-                case "ArrowRight":
-                    player.x = Math.min(canvas.width - player.size, player.x + player.speed);
-                    break;
-            }
+            playerArmy.units.forEach(unit => {
+                switch (e.key) {
+                    case "ArrowUp":
+                        unit.y = Math.max(0, unit.y - unit.speed);
+                        break;
+                    case "ArrowDown":
+                        unit.y = Math.min(canvas.height - unit.size, unit.y + unit.speed);
+                        break;
+                    case "ArrowLeft":
+                        unit.x = Math.max(0, unit.x - unit.speed);
+                        break;
+                    case "ArrowRight":
+                        unit.x = Math.min(canvas.width - unit.size, unit.x + unit.speed);
+                        break;
+                }
+            });
         });
 
         gameLoop();
