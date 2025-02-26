@@ -15,18 +15,32 @@
         canvas {
             display: block;
         }
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+    <div id="hud">
+        <p>Resources: <span id="resources">100</span></p>
+        <button onclick="recruitUnit()">Recruit Soldier (50)</button>
+    </div>
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
+        let resources = 100;
+
         class Unit {
-            constructor(x, y, color, type, speed = 3, health = 100) {
+            constructor(x, y, color, type, speed = 3, health = 100, damage = 10) {
                 this.x = x;
                 this.y = y;
                 this.size = 20;
@@ -34,6 +48,8 @@
                 this.speed = speed;
                 this.type = type;
                 this.health = health;
+                this.damage = damage;
+                this.selected = false;
             }
 
             draw() {
@@ -41,12 +57,26 @@
                 ctx.fillRect(this.x, this.y, this.size, this.size);
                 ctx.fillStyle = "white";
                 ctx.fillText(this.health, this.x, this.y - 5);
+                if (this.selected) {
+                    ctx.strokeStyle = "yellow";
+                    ctx.strokeRect(this.x - 2, this.y - 2, this.size + 4, this.size + 4);
+                }
+            }
+
+            attack(target) {
+                if (Math.abs(this.x - target.x) < this.size && Math.abs(this.y - target.y) < this.size) {
+                    target.health -= this.damage;
+                    if (target.health <= 0) {
+                        return true;
+                    }
+                }
+                return false;
             }
         }
 
         class Enemy extends Unit {
             constructor(x, y) {
-                super(x, y, "red", "enemy", 2, 50);
+                super(x, y, "red", "enemy", 2, 50, 5);
                 this.direction = Math.random() > 0.5 ? 1 : -1;
             }
 
@@ -63,8 +93,8 @@
                 this.units = [];
             }
 
-            addUnit(x, y, color, type, speed, health) {
-                this.units.push(new Unit(x, y, color, type, speed, health));
+            addUnit(x, y, color, type, speed, health, damage) {
+                this.units.push(new Unit(x, y, color, type, speed, health, damage));
             }
 
             draw() {
@@ -90,38 +120,70 @@
         }
 
         const playerArmy = new PlayerArmy();
-        playerArmy.addUnit(100, 100, "blue", "soldier", 3, 100);
-        playerArmy.addUnit(130, 100, "blue", "tank", 2, 200);
+        playerArmy.addUnit(100, 100, "blue", "soldier", 3, 100, 10);
         
         const enemies = [new Enemy(400, 200), new Enemy(600, 300)];
         const playerBase = new Base(50, canvas.height - 100);
+
+        function recruitUnit() {
+            if (resources >= 50) {
+                playerArmy.addUnit(100, 150, "blue", "soldier", 3, 100, 10);
+                resources -= 50;
+                document.getElementById("resources").textContent = resources;
+            }
+        }
 
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             playerBase.draw();
             playerArmy.draw();
-            enemies.forEach(enemy => {
+            enemies.forEach((enemy, index) => {
                 enemy.update();
                 enemy.draw();
+                playerArmy.units.forEach((unit, unitIndex) => {
+                    if (unit.attack(enemy)) {
+                        enemies.splice(index, 1);
+                        resources += 20;
+                        document.getElementById("resources").textContent = resources;
+                    }
+                });
             });
             requestAnimationFrame(gameLoop);
         }
 
         window.addEventListener("keydown", (e) => {
             playerArmy.units.forEach(unit => {
-                switch (e.key) {
-                    case "ArrowUp":
-                        unit.y = Math.max(0, unit.y - unit.speed);
-                        break;
-                    case "ArrowDown":
-                        unit.y = Math.min(canvas.height - unit.size, unit.y + unit.speed);
-                        break;
-                    case "ArrowLeft":
-                        unit.x = Math.max(0, unit.x - unit.speed);
-                        break;
-                    case "ArrowRight":
-                        unit.x = Math.min(canvas.width - unit.size, unit.x + unit.speed);
-                        break;
+                if (unit.selected) {
+                    switch (e.key) {
+                        case "ArrowUp":
+                            unit.y = Math.max(0, unit.y - unit.speed);
+                            break;
+                        case "ArrowDown":
+                            unit.y = Math.min(canvas.height - unit.size, unit.y + unit.speed);
+                            break;
+                        case "ArrowLeft":
+                            unit.x = Math.max(0, unit.x - unit.speed);
+                            break;
+                        case "ArrowRight":
+                            unit.x = Math.min(canvas.width - unit.size, unit.x + unit.speed);
+                            break;
+                    }
+                }
+            });
+        });
+
+        canvas.addEventListener("click", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            playerArmy.units.forEach(unit => {
+                if (
+                    mouseX >= unit.x &&
+                    mouseX <= unit.x + unit.size &&
+                    mouseY >= unit.y &&
+                    mouseY <= unit.y + unit.size
+                ) {
+                    unit.selected = !unit.selected;
                 }
             });
         });
