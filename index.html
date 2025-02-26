@@ -40,7 +40,7 @@
         let resources = 100;
 
         class Unit {
-            constructor(x, y, color, type, speed = 3, health = 100, damage = 10) {
+            constructor(x, y, color, type, speed = 2, health = 100, damage = 10) {
                 this.x = x;
                 this.y = y;
                 this.size = 20;
@@ -87,7 +87,7 @@
 
         class Enemy extends Unit {
             constructor(x, y) {
-                super(x, y, "red", "enemy", 1.5, 50, 5);
+                super(x, y, "red", "enemy", 1, 75, 7);
                 this.direction = Math.random() > 0.5 ? 1 : -1;
             }
 
@@ -105,7 +105,7 @@
             }
 
             addUnit(x, y) {
-                this.units.push(new Unit(x, y, "blue", "soldier", 3, 100, 10));
+                this.units.push(new Unit(x, y, "blue", "soldier", 2, 100, 10));
             }
 
             draw() {
@@ -117,9 +117,9 @@
             constructor(x, y) {
                 this.x = x;
                 this.y = y;
-                this.size = 50;
+                this.size = 60;
                 this.color = "green";
-                this.health = 500;
+                this.health = 1000;
             }
 
             draw() {
@@ -154,7 +154,7 @@
                 playerArmy.units.forEach((unit, unitIndex) => {
                     if (unit.attack(enemy)) {
                         enemies.splice(index, 1);
-                        resources += 20;
+                        resources += 30;
                         document.getElementById("resources").textContent = resources;
                     }
                 });
